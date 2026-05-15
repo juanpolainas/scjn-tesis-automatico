@@ -1,0 +1,55 @@
+name: Extracción Semanal SCJN
+
+on:
+  schedule:
+    - cron: '0 17 * * 5'
+  workflow_dispatch:
+
+jobs:
+  extraer-tesis:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repositorio
+        uses: actions/checkout@v4
+      
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Instalar dependencias
+        run: |
+          pip install requests beautifulsoup4 lxml
+      
+      - name: Extraer tesis SCJN
+        run: |
+          python extractor_simple.py
+      
+      - name: Commit y push resultados
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "GitHub Actions Bot"
+          git add datos/
+          git commit -m "📊 Tesis SCJN - $(date +'%Y-%m-%d')" || echo "No hay cambios"
+          git push
+      
+      - name: Enviar notificación por email
+        if: success()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "✅ Tesis SCJN extraídas - ${{ github.run_number }}"
+          body: |
+            Extracción completada exitosamente.
+            
+            Fecha: $(date)
+            Archivo: datos/tesis_scjn_$(date +'%Y%m%d').json
+            
+            Ver en: ${{ github.server_url }}/${{ github.repository }}/tree/main/datos
+          to: ${{ secrets.EMAIL_DESTINATARIO }}
+          from: Sistema SCJN Automatizado
+          attachments: datos/tesis_scjn_*.json
