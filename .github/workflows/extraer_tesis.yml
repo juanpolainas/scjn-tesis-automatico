@@ -2,7 +2,7 @@ name: Extracción Semanal SCJN
 
 on:
   schedule:
-    - cron: '0 17 * * 5'
+    - cron: '0 17 * * 5'  # Viernes 11:00 AM México
   workflow_dispatch:
 
 jobs:
@@ -18,13 +18,18 @@ jobs:
         with:
           python-version: '3.11'
       
+      - name: Instalar Chrome
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
+      
       - name: Instalar dependencias
         run: |
-          pip install requests beautifulsoup4 lxml
+          pip install selenium
       
       - name: Extraer tesis SCJN
         run: |
-          python extractor_simple.py
+          python extractor_selenium.py
       
       - name: Commit y push resultados
         run: |
@@ -42,14 +47,11 @@ jobs:
           server_port: 587
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: "✅ Tesis SCJN extraídas - ${{ github.run_number }}"
+          subject: "✅ Tesis SCJN extraídas - Run #${{ github.run_number }}"
           body: |
             Extracción completada exitosamente.
             
             Fecha: $(date)
-            Archivo: datos/tesis_scjn_$(date +'%Y%m%d').json
-            
-            Ver en: ${{ github.server_url }}/${{ github.repository }}/tree/main/datos
+            Ver resultados en: ${{ github.server_url }}/${{ github.repository }}/tree/main/datos
           to: ${{ secrets.EMAIL_DESTINATARIO }}
           from: Sistema SCJN Automatizado
-          attachments: datos/tesis_scjn_*.json
